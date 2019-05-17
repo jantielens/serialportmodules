@@ -76,7 +76,7 @@ namespace SerialPortModule
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while opening port: { ex.ToString()}")
+                Console.WriteLine($"Exception while opening port: { ex.ToString()}");
             }
         }
 
