@@ -66,11 +66,18 @@ namespace SerialPortModule
             Console.WriteLine("End of serial ports");
 
             Console.WriteLine("Opening port.");
-            serialPort = new SerialPort("/dev/ttyACM0", 9600);
-            serialPort.Open();
-            serialPort.ReadExisting(); // flush what's in there
-            serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
-            Console.WriteLine("Port opened.");
+            try
+            {
+                serialPort = new SerialPort("/dev/ttyACM0", 9600);
+                serialPort.Open();
+                serialPort.ReadExisting(); // flush what's in there
+                serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
+                Console.WriteLine("Port opened.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception while opening port: { ex.ToString()}")
+            }
         }
 
         public static void SerialDataReceived(object sender, SerialDataReceivedEventArgs e)
