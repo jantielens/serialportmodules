@@ -11,6 +11,7 @@ namespace SerialPortModule
     using Microsoft.Azure.Devices.Client;
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
     using System.IO.Ports;
+    using System.Linq;
 
     class Program
     {
@@ -51,6 +52,21 @@ namespace SerialPortModule
             // Open a connection to the Edge runtime
             ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
             await ioTHubModuleClient.OpenAsync();
+            Console.WriteLine(@"
+███████╗███████╗██████╗ ██╗ █████╗ ██╗         ██████╗  ██████╗ ██████╗ ████████╗
+██╔════╝██╔════╝██╔══██╗██║██╔══██╗██║         ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝
+███████╗█████╗  ██████╔╝██║███████║██║         ██████╔╝██║   ██║██████╔╝   ██║   
+╚════██║██╔══╝  ██╔══██╗██║██╔══██║██║         ██╔═══╝ ██║   ██║██╔══██╗   ██║   
+███████║███████╗██║  ██║██║██║  ██║███████╗    ██║     ╚██████╔╝██║  ██║   ██║   
+╚══════╝╚══════╝╚═╝  ╚═╝╚═╝╚═╝  ╚═╝╚══════╝    ╚═╝      ╚═════╝ ╚═╝  ╚═╝   ╚═╝   
+                                                ______            _       _       
+                                                |  ___ \          | |     | |      
+                                                | | _ | | ___   _ | |_   _| | ____ 
+                                                | || || |/ _ \ / || | | | | |/ _  )
+                                                | || || | |_| ( (_| | |_| | ( (/ / 
+                                                |_||_||_|\___/ \____|\____|_|\____)        
+                                    https://github.com/jantielens/serialportmodules                                                     
+            ");
             Console.WriteLine("IoT Hub module client initialized.");
 
             // Register callback to be called when a message is received by the module
@@ -61,18 +77,32 @@ namespace SerialPortModule
             Console.WriteLine("The following serial ports were found:");             // Display each port name to the console.
             foreach (string port in ports)
             {
-                Console.WriteLine(port);
+                Console.WriteLine($" - {port}");
             }
-            Console.WriteLine("End of serial ports");
+            Console.WriteLine("End of serial ports.");
 
+            string serialPortName = "/dev/ttyACM0";
+            // try to read configured port env. vars
+            if(Environment.GetEnvironmentVariable("portname") != null)
+            {
+                // found in env variables, use it
+                serialPortName = Environment.GetEnvironmentVariable("portname");
+                Console.WriteLine($"Found 'portname' environment variable, using port '{serialPortName}'.");
+            }
+            else
+            {
+                Console.WriteLine($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
+            }
+
+            
             Console.WriteLine("Opening port.");
             try
             {
-                serialPort = new SerialPort("/dev/ttyACM0", 9600);
+                serialPort = new SerialPort(serialPortName, 9600);
                 serialPort.Open();
                 serialPort.ReadExisting(); // flush what's in there
                 serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
-                Console.WriteLine("Port opened.");
+                Console.WriteLine($"Port {serialPortName} opened.");
             }
             catch (Exception ex)
             {
