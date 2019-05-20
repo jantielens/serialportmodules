@@ -61,18 +61,19 @@ namespace SerialPortModule
             Console.WriteLine("The following serial ports were found:");             // Display each port name to the console.
             foreach (string port in ports)
             {
-                Console.WriteLine(port);
+                Console.WriteLine($" - {port}");
             }
-            Console.WriteLine("End of serial ports");
+            Console.WriteLine("End of serial ports.");
 
+            string serialPortName = "/dev/ttyACM0";
             Console.WriteLine("Opening port.");
             try
             {
-                serialPort = new SerialPort("/dev/ttyACM0", 9600);
+                serialPort = new SerialPort(serialPortName, 9600);
                 serialPort.Open();
                 serialPort.ReadExisting(); // flush what's in there
                 serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
-                Console.WriteLine("Port opened.");
+                Console.WriteLine($"Port {serialPortName} opened.");
             }
             catch (Exception ex)
             {
