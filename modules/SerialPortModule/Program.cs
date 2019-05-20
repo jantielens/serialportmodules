@@ -83,7 +83,7 @@ namespace SerialPortModule
 
             string serialPortName = "/dev/ttyACM0";
             // try to read configured port env. vars
-            if(Environment.GetEnvironmentVariable("portname") != null)
+            if (Environment.GetEnvironmentVariable("portname") != null)
             {
                 // found in env variables, use it
                 serialPortName = Environment.GetEnvironmentVariable("portname");
@@ -94,7 +94,7 @@ namespace SerialPortModule
                 Console.WriteLine($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
             }
 
-            
+
             Console.WriteLine("Opening port.");
             try
             {
@@ -107,17 +107,25 @@ namespace SerialPortModule
             catch (Exception ex)
             {
                 Console.WriteLine($"Exception while opening port: { ex.ToString()}");
+                throw new ApplicationException($"Could not open serial port '{serialPortName}': {ex.ToString()}");
             }
         }
 
         public static void SerialDataReceived(object sender, SerialDataReceivedEventArgs e)
         {
             SerialPort sp = (SerialPort)sender;
-            string indata = sp.ReadLine();
-            Console.WriteLine("Received serial data: " + indata);
-            byte[] bytes = Encoding.UTF8.GetBytes(indata);
-            Console.WriteLine("Sending to hub ...");
-            ioTHubModuleClient.SendEventAsync("output1", new Message(bytes));
+            try
+            {
+                string indata = sp.ReadLine(); // wait for new line is received
+                Console.WriteLine("Received serial data: " + indata);
+                byte[] bytes = Encoding.UTF8.GetBytes(indata);
+                Console.WriteLine("Sending to hub ...");
+                ioTHubModuleClient.SendEventAsync("output1", new Message(bytes));
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Exception while receiving/sending serial data: {ex.ToString()}");
+            }
         }
 
         /// <summary>
