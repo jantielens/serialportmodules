@@ -109,6 +109,8 @@ namespace SerialPortModule
                 Console.WriteLine($"Exception while opening port: { ex.ToString()}");
                 throw new ApplicationException($"Could not open serial port '{serialPortName}': {ex.ToString()}");
             }
+
+            await ioTHubModuleClient.SetMethodHandlerAsync("sendserial", OnSendSerial, null);
         }
 
         public static void SerialDataReceived(object sender, SerialDataReceivedEventArgs e)
@@ -158,6 +160,41 @@ namespace SerialPortModule
                 Console.WriteLine("Received message sent");
             }
             return MessageResponse.Completed;
+        }
+
+        private static async Task<MethodResponse> OnSendSerial(MethodRequest methodRequest, object userContext)
+        {
+            Console.WriteLine($"Direct Method {methodRequest.Name} invoked.");
+            Newtonsoft.Json.Linq.JObject jsonObject = null;
+            try
+            {
+                jsonObject = Newtonsoft.Json.Linq.JObject.Parse(methodRequest.DataAsJson);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Exception while de-serializing received message: " + ex.ToString());
+
+
+            }
+            if (jsonObject != null)
+            {
+                try
+                {
+                    var data = jsonObject.Value<string>("message");
+                    Console.WriteLine($"Sending message: {data}");
+                    serialPort.WriteLine(data);
+                    return new MethodResponse(200);
+                }
+                catch (Exception msgEx)
+                {
+                    Console.WriteLine($"Exception while retreiving 'message' property from JSON: " + msgEx.ToString());
+                    return new MethodResponse(500);
+                }
+            }
+            else
+            {
+                return new MethodResponse(500);
+            }
         }
     }
 }
