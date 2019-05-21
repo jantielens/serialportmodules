@@ -1,5 +1,5 @@
 # Serial Port Modules
-This is a sample implementation to build an Azure IoT Edge module that can receive messages over a serial port, and forwards those message to the IoT Hub (or other modules).
+This is a sample implementation to build an Azure IoT Edge module that can receive messages over a serial port, and forwards those message to the IoT Hub (or other modules). The module can also send messages over a serial port, triggered by a direct method.
 The solution is written in C# and currently contains one module (SerialPortModule).
 
 ## Requirements
