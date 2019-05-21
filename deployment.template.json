@@ -13,7 +13,7 @@
               "jtmsspeedtesterreg": {
                 "username": "$CONTAINER_REGISTRY_USERNAME_jtmsspeedtesterreg",
                 "password": "$CONTAINER_REGISTRY_PASSWORD_jtmsspeedtesterreg",
-                "address": "jtmsspeedtesterreg.azurecr.io"
+                "address": "jantielens/serialportmodule"
               }
             }
           }
