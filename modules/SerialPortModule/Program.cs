@@ -82,6 +82,7 @@ namespace SerialPortModule
             Console.WriteLine("End of serial ports.");
 
             string serialPortName = "/dev/ttyACM0";
+            int serialPortSpeed;
             // try to read configured port env. vars
             if (Environment.GetEnvironmentVariable("portname") != null)
             {
@@ -93,12 +94,30 @@ namespace SerialPortModule
             {
                 Console.WriteLine($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
             }
+            if(Environment.GetEnvironmentVariable("portspeed") != null)
+            {
+                Console.WriteLine($"Found 'portspeed' environment variable, value '{Environment.GetEnvironmentVariable("portspeed")}'.");
+                if(int.TryParse(Environment.GetEnvironmentVariable("portspeed"),out serialPortSpeed))
+                {
+                    Console.WriteLine($"Using serial port speed {serialPortSpeed}");
+                }
+                else
+                {
+                    Console.WriteLine("Couldn't convert environment variable to a number, using default speed 9600.");
+                    serialPortSpeed = 9600;
+                }
+            }
+            else
+            {
+                Console.WriteLine("No environment variable 'portspeed' found, using default speed 9600");
+                serialPortSpeed = 9600;
+            }
 
 
             Console.WriteLine("Opening port.");
             try
             {
-                serialPort = new SerialPort(serialPortName, 9600);
+                serialPort = new SerialPort(serialPortName, serialPortSpeed);
                 serialPort.Open();
                 serialPort.ReadExisting(); // flush what's in there
                 serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
