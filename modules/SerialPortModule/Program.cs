@@ -94,7 +94,7 @@ namespace SerialPortModule
             }
             else
             {
-                Logger.Information($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
+                Logger.Warning($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
             }
             if (Environment.GetEnvironmentVariable("portspeed") != null)
             {
@@ -105,13 +105,13 @@ namespace SerialPortModule
                 }
                 else
                 {
-                    Logger.Information("Couldn't convert environment variable to a number, using default speed 9600.");
+                    Logger.Error("Couldn't convert environment variable to a number, using default speed 9600.");
                     serialPortSpeed = 9600;
                 }
             }
             else
             {
-                Logger.Information("No environment variable 'portspeed' found, using default speed 9600");
+                Logger.Warning("No environment variable 'portspeed' found, using default speed 9600");
                 serialPortSpeed = 9600;
             }
 
@@ -127,7 +127,7 @@ namespace SerialPortModule
             }
             catch (Exception ex)
             {
-                Logger.Information($"Exception while opening port: { ex.ToString()}");
+                Logger.Error($"Exception while opening port: { ex.ToString()}");
                 throw new ApplicationException($"Could not open serial port '{serialPortName}': {ex.ToString()}");
             }
 
@@ -147,7 +147,7 @@ namespace SerialPortModule
             }
             catch (Exception ex)
             {
-                Logger.Information($"Exception while receiving/sending serial data: {ex.ToString()}");
+                Logger.Error($"Exception while receiving/sending serial data: {ex.ToString()}");
             }
         }
 
@@ -193,7 +193,7 @@ namespace SerialPortModule
             }
             catch (Exception ex)
             {
-                Logger.Information("Exception while de-serializing received message: " + ex.ToString());
+                Logger.Error("Exception while de-serializing received message: " + ex.ToString());
 
 
             }
@@ -208,7 +208,7 @@ namespace SerialPortModule
                 }
                 catch (Exception msgEx)
                 {
-                    Logger.Information($"Exception while retreiving 'message' property from JSON: " + msgEx.ToString());
+                    Logger.Error($"Exception while retreiving 'message' property from JSON: " + msgEx.ToString());
                     return new MethodResponse(500);
                 }
             }
