@@ -71,9 +71,6 @@ namespace SerialPortModule
             ");
             Logger.Information("IoT Hub module client initialized.");
 
-            // Register callback to be called when a message is received by the module
-            await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, ioTHubModuleClient);
-
             // Initialize Serial Port
             string[] ports = SerialPort.GetPortNames();
             Logger.Information("The following serial ports were found:");             // Display each port name to the console.
@@ -151,69 +148,51 @@ namespace SerialPortModule
             }
         }
 
-        /// <summary>
-        /// This method is called whenever the module is sent a message from the EdgeHub. 
-        /// It just pipe the messages without any change.
-        /// It prints all the incoming messages.
-        /// </summary>
-        static async Task<MessageResponse> PipeMessage(Message message, object userContext)
+        private static string ExtractMessage(string json)
         {
-            int counterValue = Interlocked.Increment(ref counter);
-
-            var moduleClient = userContext as ModuleClient;
-            if (moduleClient == null)
-            {
-                throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
-            }
-
-            byte[] messageBytes = message.GetBytes();
-            string messageString = Encoding.UTF8.GetString(messageBytes);
-            Logger.Information($"Received message: {counterValue}, Body: [{messageString}]");
-
-            if (!string.IsNullOrEmpty(messageString))
-            {
-                var pipeMessage = new Message(messageBytes);
-                foreach (var prop in message.Properties)
-                {
-                    pipeMessage.Properties.Add(prop.Key, prop.Value);
-                }
-                await moduleClient.SendEventAsync("output1", pipeMessage);
-                Logger.Information("Received message sent");
-            }
-            return MessageResponse.Completed;
-        }
-
-        private static async Task<MethodResponse> OnSendSerial(MethodRequest methodRequest, object userContext)
-        {
-            Logger.Information($"Direct Method {methodRequest.Name} invoked.");
+            Logger.Information($"Deserializing and trying to get 'message' value from: {json}");
             Newtonsoft.Json.Linq.JObject jsonObject = null;
             try
             {
-                jsonObject = Newtonsoft.Json.Linq.JObject.Parse(methodRequest.DataAsJson);
+                jsonObject = Newtonsoft.Json.Linq.JObject.Parse(json);
             }
             catch (Exception ex)
             {
-                Logger.Error("Exception while de-serializing received message: " + ex.ToString());
-
-
+                Logger.Error("Exception while de-serializing message: " + ex.ToString());
             }
             if (jsonObject != null)
             {
                 try
                 {
                     var data = jsonObject.Value<string>("message");
-                    Logger.Information($"Sending message: {data}");
-                    serialPort.WriteLine(data);
-                    return new MethodResponse(200);
+                    return data;
                 }
                 catch (Exception msgEx)
                 {
-                    Logger.Error($"Exception while retreiving 'message' property from JSON: " + msgEx.ToString());
-                    return new MethodResponse(500);
+                    Logger.Error($"Exception while extracting 'message' property from JSON: " + msgEx.ToString());
+                    throw new ApplicationException("Couldn't extract message property.");
                 }
             }
             else
             {
+                throw new ApplicationException("Couldn't deserialze message.");
+            }
+        }
+
+        private static async Task<MethodResponse> OnSendSerial(MethodRequest methodRequest, object userContext)
+        {
+            Logger.Information($"Direct Method {methodRequest.Name} invoked.");
+            try
+            {
+                var message = ExtractMessage(methodRequest.DataAsJson);
+                Logger.Information($"Sending message to serial: {message}");
+                serialPort.WriteLine(message);
+                return new MethodResponse(200);
+
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception while retreiving 'message' property from JSON: " + ex.ToString());
                 return new MethodResponse(500);
             }
         }
