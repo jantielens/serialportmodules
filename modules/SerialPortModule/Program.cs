@@ -12,6 +12,7 @@ namespace SerialPortModule
     using Microsoft.Azure.Devices.Client.Transport.Mqtt;
     using System.IO.Ports;
     using System.Linq;
+    using Serilog;
 
     class Program
     {
@@ -52,7 +53,8 @@ namespace SerialPortModule
             // Open a connection to the Edge runtime
             ioTHubModuleClient = await ModuleClient.CreateFromEnvironmentAsync(settings);
             await ioTHubModuleClient.OpenAsync();
-            Console.WriteLine(@"
+            InitLogging();
+            Logger.Information(@"
 ███████╗███████╗██████╗ ██╗ █████╗ ██╗         ██████╗  ██████╗ ██████╗ ████████╗
 ██╔════╝██╔════╝██╔══██╗██║██╔══██╗██║         ██╔══██╗██╔═══██╗██╔══██╗╚══██╔══╝
 ███████╗█████╗  ██████╔╝██║███████║██║         ██████╔╝██║   ██║██████╔╝   ██║   
@@ -67,19 +69,16 @@ namespace SerialPortModule
                                                 |_||_||_|\___/ \____|\____|_|\____)        
                                     https://github.com/jantielens/serialportmodules                                                     
             ");
-            Console.WriteLine("IoT Hub module client initialized.");
-
-            // Register callback to be called when a message is received by the module
-            await ioTHubModuleClient.SetInputMessageHandlerAsync("input1", PipeMessage, ioTHubModuleClient);
+            Logger.Information("IoT Hub module client initialized.");
 
             // Initialize Serial Port
             string[] ports = SerialPort.GetPortNames();
-            Console.WriteLine("The following serial ports were found:");             // Display each port name to the console.
+            Logger.Information("The following serial ports were found:");             // Display each port name to the console.
             foreach (string port in ports)
             {
-                Console.WriteLine($" - {port}");
+                Logger.Information($" - {port}");
             }
-            Console.WriteLine("End of serial ports.");
+            Logger.Information("End of serial ports.");
 
             string serialPortName = "/dev/ttyACM0";
             int serialPortSpeed;
@@ -88,44 +87,44 @@ namespace SerialPortModule
             {
                 // found in env variables, use it
                 serialPortName = Environment.GetEnvironmentVariable("portname");
-                Console.WriteLine($"Found 'portname' environment variable, using port '{serialPortName}'.");
+                Logger.Information($"Found 'portname' environment variable, using port '{serialPortName}'.");
             }
             else
             {
-                Console.WriteLine($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
+                Logger.Warning($"Environment variable 'portname' not found, using default name '{serialPortName}'.");
             }
-            if(Environment.GetEnvironmentVariable("portspeed") != null)
+            if (Environment.GetEnvironmentVariable("portspeed") != null)
             {
-                Console.WriteLine($"Found 'portspeed' environment variable, value '{Environment.GetEnvironmentVariable("portspeed")}'.");
-                if(int.TryParse(Environment.GetEnvironmentVariable("portspeed"),out serialPortSpeed))
+                Logger.Information($"Found 'portspeed' environment variable, value '{Environment.GetEnvironmentVariable("portspeed")}'.");
+                if (int.TryParse(Environment.GetEnvironmentVariable("portspeed"), out serialPortSpeed))
                 {
-                    Console.WriteLine($"Using serial port speed {serialPortSpeed}");
+                    Logger.Information($"Using serial port speed {serialPortSpeed}");
                 }
                 else
                 {
-                    Console.WriteLine("Couldn't convert environment variable to a number, using default speed 9600.");
+                    Logger.Error("Couldn't convert environment variable to a number, using default speed 9600.");
                     serialPortSpeed = 9600;
                 }
             }
             else
             {
-                Console.WriteLine("No environment variable 'portspeed' found, using default speed 9600");
+                Logger.Warning("No environment variable 'portspeed' found, using default speed 9600");
                 serialPortSpeed = 9600;
             }
 
 
-            Console.WriteLine("Opening port.");
+            Logger.Information("Opening port.");
             try
             {
                 serialPort = new SerialPort(serialPortName, serialPortSpeed);
                 serialPort.Open();
                 serialPort.ReadExisting(); // flush what's in there
                 serialPort.DataReceived += new SerialDataReceivedEventHandler(SerialDataReceived);
-                Console.WriteLine($"Port {serialPortName} opened.");
+                Logger.Information($"Port {serialPortName} opened.");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while opening port: { ex.ToString()}");
+                Logger.Error($"Exception while opening port: { ex.ToString()}");
                 throw new ApplicationException($"Could not open serial port '{serialPortName}': {ex.ToString()}");
             }
 
@@ -138,82 +137,73 @@ namespace SerialPortModule
             try
             {
                 string indata = sp.ReadLine(); // wait for new line is received
-                Console.WriteLine("Received serial data: " + indata);
+                Logger.Information("Received serial data: " + indata);
                 byte[] bytes = Encoding.UTF8.GetBytes(indata);
-                Console.WriteLine("Sending to hub ...");
+                Logger.Information("Sending to hub ...");
                 ioTHubModuleClient.SendEventAsync("output1", new Message(bytes));
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Exception while receiving/sending serial data: {ex.ToString()}");
+                Logger.Error($"Exception while receiving/sending serial data: {ex.ToString()}");
             }
         }
 
-        /// <summary>
-        /// This method is called whenever the module is sent a message from the EdgeHub. 
-        /// It just pipe the messages without any change.
-        /// It prints all the incoming messages.
-        /// </summary>
-        static async Task<MessageResponse> PipeMessage(Message message, object userContext)
+        private static string ExtractMessage(string json)
         {
-            int counterValue = Interlocked.Increment(ref counter);
-
-            var moduleClient = userContext as ModuleClient;
-            if (moduleClient == null)
-            {
-                throw new InvalidOperationException("UserContext doesn't contain " + "expected values");
-            }
-
-            byte[] messageBytes = message.GetBytes();
-            string messageString = Encoding.UTF8.GetString(messageBytes);
-            Console.WriteLine($"Received message: {counterValue}, Body: [{messageString}]");
-
-            if (!string.IsNullOrEmpty(messageString))
-            {
-                var pipeMessage = new Message(messageBytes);
-                foreach (var prop in message.Properties)
-                {
-                    pipeMessage.Properties.Add(prop.Key, prop.Value);
-                }
-                await moduleClient.SendEventAsync("output1", pipeMessage);
-                Console.WriteLine("Received message sent");
-            }
-            return MessageResponse.Completed;
-        }
-
-        private static async Task<MethodResponse> OnSendSerial(MethodRequest methodRequest, object userContext)
-        {
-            Console.WriteLine($"Direct Method {methodRequest.Name} invoked.");
+            Logger.Information($"Deserializing and trying to get 'message' value from: {json}");
             Newtonsoft.Json.Linq.JObject jsonObject = null;
             try
             {
-                jsonObject = Newtonsoft.Json.Linq.JObject.Parse(methodRequest.DataAsJson);
+                jsonObject = Newtonsoft.Json.Linq.JObject.Parse(json);
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Exception while de-serializing received message: " + ex.ToString());
-
-
+                Logger.Error("Exception while de-serializing message: " + ex.ToString());
             }
             if (jsonObject != null)
             {
                 try
                 {
                     var data = jsonObject.Value<string>("message");
-                    Console.WriteLine($"Sending message: {data}");
-                    serialPort.WriteLine(data);
-                    return new MethodResponse(200);
+                    return data;
                 }
                 catch (Exception msgEx)
                 {
-                    Console.WriteLine($"Exception while retreiving 'message' property from JSON: " + msgEx.ToString());
-                    return new MethodResponse(500);
+                    Logger.Error($"Exception while extracting 'message' property from JSON: " + msgEx.ToString());
+                    throw new ApplicationException("Couldn't extract message property.");
                 }
             }
             else
             {
+                throw new ApplicationException("Couldn't deserialze message.");
+            }
+        }
+
+        private static async Task<MethodResponse> OnSendSerial(MethodRequest methodRequest, object userContext)
+        {
+            Logger.Information($"Direct Method {methodRequest.Name} invoked.");
+            try
+            {
+                var message = ExtractMessage(methodRequest.DataAsJson);
+                Logger.Information($"Sending message to serial: {message}");
+                serialPort.WriteLine(message);
+                return new MethodResponse(200);
+
+            }
+            catch (Exception ex)
+            {
+                Logger.Error($"Exception while retreiving 'message' property from JSON: " + ex.ToString());
                 return new MethodResponse(500);
             }
         }
+
+        public static void InitLogging()
+        {
+            LoggerConfiguration loggerConfiguration = new LoggerConfiguration();
+            loggerConfiguration.MinimumLevel.Information();
+            loggerConfiguration.WriteTo.Console();
+            Logger = loggerConfiguration.CreateLogger();
+        }
+        public static Serilog.Core.Logger Logger { get; set; } = null;
     }
 }
