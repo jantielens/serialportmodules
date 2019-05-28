@@ -10,3 +10,5 @@ The solution is written in C# and currently contains one module (SerialPortModul
 ## Remarks
 - The module is tested on a Raspberry Pi (and it works :) ).
 - The module currently depends on System.IO.Ports version=4.6.0-preview4.19164.7. This preview version allows the System.IO.Ports namespace to be used on Linux as well.
+
+[![Build Status](https://jtlns.visualstudio.com/SpeedTester/_apis/build/status/Build%20and%20Push%20to%20Docker%20Hub?branchName=master)](https://jtlns.visualstudio.com/SpeedTester/_build/latest?definitionId=40&branchName=master)
