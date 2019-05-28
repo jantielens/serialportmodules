@@ -1,15 +1,25 @@
 trigger:
-- dev
+- cicd-dev
 
 pool:
   vmImage: 'ubuntu-latest'
 
+- task: Docker@2
+  displayName: Login to ACR
+  inputs:
+    command: login
+    containerRegistry: jantielens
+
 steps:
-- script: |
-    echo '##vso[task.setvariable variable=semver_major]0'
-    echo '##vso[task.setvariable variable=semver_minor]1'
-    echo '##vso[task.setvariable variable=semver_patch]12'
-    
+    - task: Docker@2
+  inputs:
+    command: 'buildAndPush'
+    Dockerfile: 'modules/SerialPortModule/Dockerfile.arm32v7'
+    buildContext: 'modules/SerialPortModule/'
+    containerRegistry: 'jantielens'
+    repository: 'serialportmodule'
+    tags: '0.0.24-amd64'
+
 - task: Bash@3
   inputs:
     targetType: 'inline'
@@ -26,16 +36,10 @@ steps:
     script: 'sudo cp /usr/bin/qemu-arm-static $(System.DefaultWorkingDirectory)/modules/SerialPortModule/'
 
 - task: Docker@2
-  displayName: Login to ACR
-  inputs:
-    command: login
-    containerRegistry: jantielens
-
-- task: Docker@2
   inputs:
     command: 'buildAndPush'
     Dockerfile: 'modules/SerialPortModule/Dockerfile.arm32v7'
     buildContext: 'modules/SerialPortModule/'
     containerRegistry: 'jantielens'
     repository: 'serialportmodule'
-#    tags: '$(semver_major).$(semver_minor).$(semver_patch)-arm32v7'
+    tags: '0.0.24-arm32v7'
