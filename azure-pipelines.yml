@@ -15,7 +15,7 @@ steps:
 - task: Docker@2
   inputs:
     command: 'buildAndPush'
-    Dockerfile: 'modules/SerialPortModule/Dockerfile.arm32v7'
+    Dockerfile: 'modules/SerialPortModule/Dockerfile.amd64'
     buildContext: 'modules/SerialPortModule/'
     containerRegistry: 'jantielens'
     repository: 'serialportmodule'
