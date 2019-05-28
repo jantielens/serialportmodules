@@ -4,14 +4,16 @@ trigger:
 pool:
   vmImage: 'ubuntu-latest'
 
+  steps:
+
 - task: Docker@2
   displayName: Login to ACR
   inputs:
     command: login
     containerRegistry: jantielens
 
-steps:
-    - task: Docker@2
+
+- task: Docker@2
   inputs:
     command: 'buildAndPush'
     Dockerfile: 'modules/SerialPortModule/Dockerfile.arm32v7'
