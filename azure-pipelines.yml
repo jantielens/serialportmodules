@@ -18,7 +18,7 @@ steps:
     Dockerfile: 'modules/SerialPortModule/Dockerfile.amd64'
     buildContext: 'modules/SerialPortModule/'
     containerRegistry: 'jantielens'
-    repository: 'serialportmodule'
+    repository: 'jantielens/serialportmodule'
     tags: '0.0.24-amd64'
 
 - task: Bash@3
@@ -42,5 +42,5 @@ steps:
     Dockerfile: 'modules/SerialPortModule/Dockerfile.arm32v7'
     buildContext: 'modules/SerialPortModule/'
     containerRegistry: 'jantielens'
-    repository: 'serialportmodule'
+    repository: 'jantielens/serialportmodule'
     tags: '0.0.24-arm32v7'
